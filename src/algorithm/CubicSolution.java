@@ -10,12 +10,15 @@ public class CubicSolution implements Solution {
      * Calculates all possible subsequences' sums separately
      */
     @Override
-    public int maxSubSum(int[] array) {
+    public int maxSubSum(int[] array) throws InterruptedException{
         int maxSum = 0;
 
         for (int i = 0; i < array.length; i++) {
-            for (int j = i; j < array.length; j++) {
+            if(Thread.currentThread().isInterrupted()){
+                throw new InterruptedException();
+            }
 
+            for (int j = i; j < array.length ; j++) {
                 int thisSum = 0;
                 for (int k = i; k <= j; k++)
                     thisSum += array[k];
