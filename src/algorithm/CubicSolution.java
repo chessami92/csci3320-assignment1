@@ -14,12 +14,14 @@ public class CubicSolution implements Solution {
         int maxSum = 0;
 
         for (int i = 0; i < array.length; i++) {
+            //Check to see if execution has been cancelled
             if(Thread.currentThread().isInterrupted()){
                 throw new InterruptedException();
             }
 
             for (int j = i; j < array.length ; j++) {
                 int thisSum = 0;
+                //Loop through all possible sub-sequences and calculate the sum
                 for (int k = i; k <= j; k++)
                     thisSum += array[k];
 

@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 public class TestEfficiency {
     private static final int COLUMN_WIDTH = 15;
     private static final Random numberGenerator = new Random();
+    private static final long maxExecutionTime = 5 * 60 * 1000;
 
     /*
      * Main entry point for program. Creates the test trials and calls to execute them.
@@ -27,26 +28,31 @@ public class TestEfficiency {
 
         for (int i = 0; i < trialSampleSize.length; ++i) {
             //Print out what trial is currently running
-            String padded = padRight("n=" + trialSampleSize[i], COLUMN_WIDTH);
-            System.out.print(padded);
+            System.out.print(padRight("" + trialSampleSize[i]));
 
+            //Make the test data for the trials
             int[] testData = generateTestData(trialSampleSize[i]);
 
+            //Run each of the trials and receive the resultant max sub-sum
             int maxSubSum = executeSolutions(solutions, testData);
 
+            //Print out the max sub-sum
             System.out.println(maxSubSum);
         }
     }
 
     /*
-     * Method that takes a list of Solution objects that can be passed
+     * Method takes a list of Solution objects and the test data.
+     * Each solution is given the test data and executed in a separate thread.
+     * The execution time is given maxExecutionTime millis to finish, otherwise it is interrupted.
+     * Method returns the max sub-sum of the list.
      */
     private static int executeSolutions(Solution[] solutions, int[] testData) {
         int maxSubSum = 0;
-        for (int i = 0; i < solutions.length; ++i) { //loop through all solutions to the problem
+        for(Solution solution : solutions){ //Loop through all solutions to the problem
             boolean timeout = false;
 
-            SolutionRunner solutionRunner = new SolutionRunner(solutions[i], testData);
+            SolutionRunner solutionRunner = new SolutionRunner(solution, testData);
             solutionRunner.setPriority(Thread.MAX_PRIORITY);
 
             Date startTime = new Date(); //Find starting time before executing
@@ -54,8 +60,7 @@ public class TestEfficiency {
 
             //Continue waiting for the solution unless it has reached the max time or has finished
             try {
-                final long maxWaitTime = 5 * 60 * 1000;
-                solutionRunner.join(maxWaitTime); //Wait for the calculation to finish, a maximum of 5 minutes
+                solutionRunner.join(maxExecutionTime); //Wait for the calculation to finish, a maximum of 5 minutes
 
                 if(solutionRunner.getMaxSubSum() == -1){
                     timeout = true;
@@ -64,23 +69,27 @@ public class TestEfficiency {
             } catch (InterruptedException e) {
             }
 
-            String padded;
             if(timeout){
-                padded = padRight("timeout", COLUMN_WIDTH);
+                System.out.println(padRight("timeout")); //If execution was cancelled, print so
             }
             else{
                 Date endTime = new Date(); //Find ending time after executing
                 long timeTook = (endTime.getTime() - startTime.getTime()); //Find total run time in milliseconds
-                padded = padRight(timeTook + "ms", COLUMN_WIDTH);
+                String padded = padRight(timeTook + "ms");
+                System.out.print(padded);
             }
 
-            System.out.print(padded);
             maxSubSum = solutionRunner.getMaxSubSum();
         }
 
         return maxSubSum;
     }
 
+    /*
+     * Method takes an integer and makes an integer array of that size
+     * Populates the array with random integer values between -length/8 and +length/8
+     * Returns the reference to the generated array
+     */
     private static int[] generateTestData(int length) {
         int[] testData = new int[length];
 
@@ -94,16 +103,24 @@ public class TestEfficiency {
         return testData;
     }
 
+    /*
+     * Method prints out the header by calling the getSolutionType on each solution
+     * and padding right the appropriate number of spaces
+     */
     private static void printTableHeader(Solution[] solvers) {
         //Print out the header for table of results
-        System.out.print(padRight("", COLUMN_WIDTH));
+        System.out.print(padRight("n"));
         for (int i = 0; i < solvers.length; ++i) {
-            System.out.print(padRight(solvers[i].getSolutionType(), COLUMN_WIDTH));
+            System.out.print(padRight(solvers[i].getSolutionType()));
         }
-        System.out.println(padRight("Max Sub-Sum", COLUMN_WIDTH));
+        System.out.println(padRight("Max Sub-Sum"));
     }
 
-    private static String padRight(String string, int n) {
-        return String.format("%1$-" + n + "s", string);
+    /*
+     * Method formats the string to be padded with COLUMN_WIDTH number
+     * of spaces to the right of the string for outputting to the table.
+     */
+    private static String padRight(String string) {
+        return String.format("%1$-" + COLUMN_WIDTH + "s", string);
     }
 }
