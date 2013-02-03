@@ -4,6 +4,9 @@ import algorithm.*;
 
 import java.util.Date;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created By: Josh
@@ -12,16 +15,15 @@ import java.util.Random;
 public class TestEfficiency {
     private static final int COLUMN_WIDTH = 15;
     private static final Random numberGenerator = new Random();
-    private static final SolutionRunner solutionRunner = new SolutionRunner();
 
     /*
      * Main entry point for program. Creates the test trials and calls to execute them.
      */
     public static void main(String[] args) {
         int[] trialSampleSize = {100, 1000, 10000, 100000};
-        Solution solvers[] = {new CubicSolution(), new QuadraticSolution(), new RecursiveSolution(), new LinearSolution()};
+        Solution solutions[] = {new CubicSolution(), new QuadraticSolution(), new RecursiveSolution(), new LinearSolution()};
 
-        printTableHeader(solvers);
+        printTableHeader(solutions);
 
         for (int i = 0; i < trialSampleSize.length; ++i) {
             //Print out what trial is currently running
@@ -29,12 +31,67 @@ public class TestEfficiency {
             System.out.print(padded);
 
             int[] testData = generateTestData(trialSampleSize[i]);
-            solutionRunner.setTestData(testData);
 
-            int maxSubSum = executeSolutions(solvers);
+            int maxSubSum = executeSolutions(solutions, testData);
 
             System.out.println(maxSubSum);
         }
+    }
+
+    /*
+     * Method that takes a list of Solution objects that can be passed
+     */
+    private static int executeSolutions(Solution[] solutions, int[] testData) {
+        int maxSubSum = 0;
+        for (int i = 0; i < solutions.length; ++i) { //loop through all solutions to the problem
+            boolean timeout = false;
+
+            SolutionRunner solutionRunner = new SolutionRunner(solutions[i], testData);
+            solutionRunner.setPriority(Thread.MAX_PRIORITY);
+
+            Date startTime = new Date(); //Find starting time before executing
+            solutionRunner.start();
+
+            //Continue waiting for the solution unless it has reached the max time or has finished
+            try {
+                final long maxWaitTime = 5 * 60 * 1000;
+                solutionRunner.join(maxWaitTime); //Wait for the calculation to finish, a maximum of 5 minutes
+
+                if(solutionRunner.getMaxSubSum() == -1){
+                    timeout = true;
+                    solutionRunner.interrupt();
+                }
+            } catch (InterruptedException e) {
+            }
+
+            String padded;
+            if(timeout){
+                padded = padRight("timeout", COLUMN_WIDTH);
+            }
+            else{
+                Date endTime = new Date(); //Find ending time after executing
+                long timeTook = (endTime.getTime() - startTime.getTime()); //Find total run time in milliseconds
+                padded = padRight(timeTook + "ms", COLUMN_WIDTH);
+            }
+
+            System.out.print(padded);
+            maxSubSum = solutionRunner.getMaxSubSum();
+        }
+
+        return maxSubSum;
+    }
+
+    private static int[] generateTestData(int length) {
+        int[] testData = new int[length];
+
+        int range = length / 4;
+        int offset = length / 8;
+
+        for (int i = 0; i < length; ++i) {
+            testData[i] = numberGenerator.nextInt(range) - offset;
+        }
+
+        return testData;
     }
 
     private static void printTableHeader(Solution[] solvers) {
@@ -46,52 +103,7 @@ public class TestEfficiency {
         System.out.println(padRight("Max Sub-Sum", COLUMN_WIDTH));
     }
 
-    private static int executeSolutions(Solution[] solvers) {
-        for (int i = 0; i < solvers.length; ++i) { //loop through all solutions to the problem
-            solutionRunner.setSolver(solvers[i]);
-            final Thread thread = new Thread(solutionRunner);
-            thread.setPriority(1); //Allow the thread executing solutions higher priority than the monitoring thread
-
-            Date startTime = new Date(); //Find starting time before executing
-            thread.start(); //Run the solution on the given data set
-
-            long maxRunTime = startTime.getTime() + 5 * 60 * 1000; //Timeout after 5 minutes
-            while (thread.isAlive()) {
-                if (System.currentTimeMillis() > maxRunTime) {
-                    thread.interrupt();
-                    break;
-                }
-            }
-
-            Date endTime = new Date(); //Find ending time after executing
-            String padded;
-            if (!thread.isInterrupted()) {
-                long timeTook = (endTime.getTime() - startTime.getTime()); //Find total run time in milliseconds
-                padded = padRight(timeTook + "ms", COLUMN_WIDTH);
-            } else {
-                padded = padRight("timeout", COLUMN_WIDTH);
-            }
-
-            System.out.print(padded);
-        }
-
-        return solutionRunner.getMaxSubSum();
-    }
-
     private static String padRight(String string, int n) {
         return String.format("%1$-" + n + "s", string);
-    }
-
-    private static int[] generateTestData(int length) {
-        int[] testData = new int[length];
-
-        int range = length / 2;
-        int offset = length / 4;
-
-        for (int i = 0; i < length; ++i) {
-            testData[i] = numberGenerator.nextInt(range) - offset;
-        }
-
-        return testData;
     }
 }
