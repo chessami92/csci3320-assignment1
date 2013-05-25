@@ -4,9 +4,6 @@ import algorithm.*;
 
 import java.util.Date;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created By: Josh
@@ -49,7 +46,7 @@ public class TestEfficiency {
      */
     private static int executeSolutions(Solution[] solutions, int[] testData) {
         int maxSubSum = 0;
-        for(Solution solution : solutions){ //Loop through all solutions to the problem
+        for (Solution solution : solutions) { //Loop through all solutions to the problem
             boolean timeout = false;
 
             SolutionRunner solutionRunner = new SolutionRunner(solution, testData);
@@ -62,17 +59,16 @@ public class TestEfficiency {
             try {
                 solutionRunner.join(maxExecutionTime); //Wait for the calculation to finish, a maximum of 5 minutes
 
-                if(solutionRunner.getMaxSubSum() == -1){
+                if (solutionRunner.getMaxSubSum() == -1) {
                     timeout = true;
                     solutionRunner.interrupt();
                 }
             } catch (InterruptedException e) {
             }
 
-            if(timeout){
-                System.out.println(padRight("timeout")); //If execution was cancelled, print so
-            }
-            else{
+            if (timeout) {
+                System.out.print(padRight("timeout")); //If execution was cancelled, print so
+            } else {
                 Date endTime = new Date(); //Find ending time after executing
                 long timeTook = (endTime.getTime() - startTime.getTime()); //Find total run time in milliseconds
                 String padded = padRight(timeTook + "ms");
